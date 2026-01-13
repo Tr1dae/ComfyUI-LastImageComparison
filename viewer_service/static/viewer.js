@@ -346,41 +346,33 @@ function renderPreview() {
         return;
     }
 
-    // For split mode, draw in screen space (no zoom/pan) to match mouse coordinates
-    // For other modes, apply zoom/pan transform
-    if (state.compareMode === MODE_SPLIT) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, 0, width, height);
-        ctx.clip();
-        drawSplit(ctx, width, height);
-        ctx.restore();
-    } else {
-        // Apply zoom/pan transform for side-by-side and toggle modes
-        ctx.save();
-        ctx.translate(state.panX, state.panY);
-        ctx.scale(state.scale, state.scale);
-        
-        // Calculate transformed dimensions for clipping
-        const transformedWidth = width / state.scale;
-        const transformedHeight = height / state.scale;
-        const clipX = -state.panX / state.scale;
-        const clipY = -state.panY / state.scale;
-        
-        ctx.beginPath();
-        ctx.rect(clipX, clipY, transformedWidth, transformedHeight);
-        ctx.clip();
+    // Apply zoom/pan transform for all modes
+    ctx.save();
+    ctx.translate(state.panX, state.panY);
+    ctx.scale(state.scale, state.scale);
 
-        switch (state.compareMode) {
-            case MODE_SIDEBYSIDE:
-                drawSideBySide(ctx, transformedWidth, transformedHeight);
-                break;
-            case MODE_TOGGLE:
-                drawToggle(ctx, transformedWidth, transformedHeight);
-                break;
-        }
-        ctx.restore();
+    // Calculate transformed dimensions for clipping
+    const transformedWidth = width / state.scale;
+    const transformedHeight = height / state.scale;
+    const clipX = -state.panX / state.scale;
+    const clipY = -state.panY / state.scale;
+
+    ctx.beginPath();
+    ctx.rect(clipX, clipY, transformedWidth, transformedHeight);
+    ctx.clip();
+
+    switch (state.compareMode) {
+        case MODE_SPLIT:
+            drawSplit(ctx, transformedWidth, transformedHeight);
+            break;
+        case MODE_SIDEBYSIDE:
+            drawSideBySide(ctx, transformedWidth, transformedHeight);
+            break;
+        case MODE_TOGGLE:
+            drawToggle(ctx, transformedWidth, transformedHeight);
+            break;
     }
+    ctx.restore();
 
     updateStatusText();
 }
@@ -581,16 +573,16 @@ elements.canvasWrapper.addEventListener("wheel", (event) => {
     const rect = elements.canvasWrapper.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    
+
     const delta = event.deltaY > 0 ? 0.9 : 1.1;
     const newScale = clamp(state.scale * delta, 0.1, 10);
-    
-    // Zoom centered on cursor
-    const scaleChange = newScale / state.scale;
-    state.panX = x - (x - state.panX) * scaleChange;
-    state.panY = y - (y - state.panY) * scaleChange;
+
+    // Zoom centered on cursor - keep the point under cursor at the same screen position
+    // Formula: newPan = cursorPos - (cursorPos - oldPan) / oldScale * newScale
+    state.panX = x - (x - state.panX) / state.scale * newScale;
+    state.panY = y - (y - state.panY) / state.scale * newScale;
     state.scale = newScale;
-    
+
     scheduleRender();
 });
 
