@@ -1,0 +1,202 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+    background: #0d1117;
+    color: #f5f5f5;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+#app {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.viewer-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    width: 100%;
+    max-width: 1400px;
+    height: 100%;
+    max-height: 900px;
+}
+
+.viewer-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.viewer-header h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.viewer-id-display {
+    font-size: 0.9rem;
+    color: #9ba3c0;
+    margin-left: auto;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #666;
+    transition: background 0.3s;
+}
+
+.status-indicator.connected {
+    background: #4caf50;
+}
+
+.status-indicator.disconnected {
+    background: #f44336;
+}
+
+.status-indicator.connecting {
+    background: #ff9800;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.mode-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.mode-row label {
+    font-size: 12px;
+    color: #b9b9b9;
+    flex-shrink: 0;
+}
+
+.mode-row select {
+    flex: 1;
+    background: #121425;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 3px 6px;
+    color: #fff;
+    font-size: 12px;
+    max-width: 200px;
+}
+
+.canvas-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #05070d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    flex: 1;
+    min-height: 160px;
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    contain: layout style paint;
+    cursor: default;
+}
+
+.canvas-wrapper.split-mode {
+    cursor: ew-resize;
+}
+
+.canvas-wrapper.pan-mode {
+    cursor: grab;
+}
+
+.canvas-wrapper.pan-mode.panning {
+    cursor: grabbing;
+}
+
+#canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-size: 12px;
+    padding: 0.5rem;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.75));
+    color: #c0c0c0;
+    pointer-events: none;
+}
+
+.overlay.hidden {
+    display: none;
+}
+
+.toggle-button,
+.action-button {
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #1f2230;
+    color: #fff;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.toggle-button:hover:not(:disabled),
+.action-button:hover:not(:disabled) {
+    background: #2d3146;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.toggle-button:disabled,
+.action-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.action-row {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.status-line {
+    font-size: 11px;
+    color: #9ba3c0;
+    min-height: 18px;
+}

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComfyUI Image Push Viewer</title>
+    <link rel="stylesheet" href="/static/viewer.css">
+</head>
+<body>
+    <div id="app">
+        <div class="viewer-container">
+            <div class="viewer-header">
+                <h1>Image Push Viewer</h1>
+                <div class="viewer-id-display">
+                    <span>Viewer ID: </span>
+                    <span id="viewer-id-display">-</span>
+                </div>
+                <div class="connection-status" id="connection-status">
+                    <span class="status-indicator" id="status-indicator"></span>
+                    <span id="status-text">Connecting...</span>
+                </div>
+            </div>
+            
+            <div class="mode-row">
+                <label for="mode-select">Compare:</label>
+                <select id="mode-select">
+                    <option value="split">Split (draggable)</option>
+                    <option value="side-by-side">Side-by-side</option>
+                    <option value="toggle">A/B toggle</option>
+                </select>
+                <button type="button" id="toggle-button" class="toggle-button" style="display: none;">
+                    Show saved image
+                </button>
+            </div>
+            
+            <div class="canvas-wrapper" id="canvas-wrapper">
+                <canvas id="canvas"></canvas>
+                <div class="overlay" id="overlay">
+                    No saved image. Press "Update last image" to capture.
+                </div>
+            </div>
+            
+            <div class="action-row">
+                <button type="button" id="update-button" class="action-button" disabled>
+                    Update last image
+                </button>
+                <button type="button" id="clear-button" class="action-button" disabled>
+                    Clear last image
+                </button>
+            </div>
+            
+            <div class="status-line" id="status-line">
+                Waiting for connection...
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/viewer.js"></script>
+</body>
+</html>
