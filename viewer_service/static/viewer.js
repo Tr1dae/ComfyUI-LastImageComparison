@@ -326,11 +326,14 @@ function renderPreview() {
     const width = cssWidth;
     const height = cssHeight;
 
-    ctx.setTransform(backingScale, 0, 0, backingScale, 0, 0);
-
-    ctx.clearRect(0, 0, width, height);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#05070d";
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const transformScale = backingScale * state.scale;
+    const translateX = state.panX * transformScale;
+    const translateY = state.panY * transformScale;
 
     const hasCurrent = Boolean(state.currentImage?.loaded);
     const hasLast = Boolean(state.lastImage?.loaded);
@@ -346,30 +349,21 @@ function renderPreview() {
         return;
     }
 
-    // Apply zoom/pan transform for all modes
     ctx.save();
-    ctx.translate(state.panX, state.panY);
-    ctx.scale(state.scale, state.scale);
-
-    // Calculate transformed dimensions for clipping
-    const transformedWidth = width / state.scale;
-    const transformedHeight = height / state.scale;
-    const clipX = -state.panX / state.scale;
-    const clipY = -state.panY / state.scale;
-
+    ctx.setTransform(transformScale, 0, 0, transformScale, translateX, translateY);
     ctx.beginPath();
-    ctx.rect(clipX, clipY, transformedWidth, transformedHeight);
+    ctx.rect(0, 0, width, height);
     ctx.clip();
 
     switch (state.compareMode) {
         case MODE_SPLIT:
-            drawSplit(ctx, transformedWidth, transformedHeight);
+            drawSplit(ctx, width, height);
             break;
         case MODE_SIDEBYSIDE:
-            drawSideBySide(ctx, transformedWidth, transformedHeight);
+            drawSideBySide(ctx, width, height);
             break;
         case MODE_TOGGLE:
-            drawToggle(ctx, transformedWidth, transformedHeight);
+            drawToggle(ctx, width, height);
             break;
     }
     ctx.restore();
@@ -577,10 +571,9 @@ elements.canvasWrapper.addEventListener("wheel", (event) => {
     const delta = event.deltaY > 0 ? 0.9 : 1.1;
     const newScale = clamp(state.scale * delta, 0.1, 10);
 
-    // Zoom centered on cursor - keep the point under cursor at the same screen position
-    // Formula: newPan = cursorPos - (cursorPos - oldPan) / oldScale * newScale
-    state.panX = x - (x - state.panX) / state.scale * newScale;
-    state.panY = y - (y - state.panY) / state.scale * newScale;
+    const scaleChange = newScale / state.scale;
+    state.panX = x - (x - state.panX) * scaleChange;
+    state.panY = y - (y - state.panY) * scaleChange;
     state.scale = newScale;
 
     scheduleRender();
