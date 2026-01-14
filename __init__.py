@@ -3,9 +3,8 @@ ComfyUI-DevImage custom node package.
 Provides image preview and push functionality.
 """
 
-# Auto-start the viewer service when this module loads
-from .viewer_service.auto_start import ensure_running
-ensure_running()  # Start on default port 8788
+# Register viewer routes on ComfyUI server (integrated approach)
+from . import viewer_routes
 
 from .last_image_preview import (
     NODE_CLASS_MAPPINGS as LAST_PREVIEW_MAPPINGS,

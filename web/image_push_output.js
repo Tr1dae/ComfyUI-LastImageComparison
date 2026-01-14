@@ -32,12 +32,8 @@ app.registerExtension({
                     // Get current viewer_id value
                     const viewerId = viewerIdWidget.value || "default";
 
-                    // Build viewer URL
-                    // Use same hostname as ComfyUI, port 8788
-                    const hostname = window.location.hostname;
-                    const protocol = window.location.protocol;
-                    const port = "8788";
-                    const viewerUrl = `${protocol}//${hostname}:${port}/?id=${encodeURIComponent(viewerId)}`;
+                    // Build viewer URL using current origin + viewer path
+                    const viewerUrl = `${window.location.origin}/simple_ui_viewer?id=${encodeURIComponent(viewerId)}`;
 
                     // Open in new tab
                     window.open(viewerUrl, "_blank");

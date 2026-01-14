@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ComfyUI Last Image Comparision Viewer</title>
-    <link rel="stylesheet" href="/static/viewer.css">
+    <title>ComfyUI Image Push Viewer</title>
+    <link rel="stylesheet" href="/simple_ui_viewer/static/viewer.css">
 </head>
 <body>
     <div id="app">
         <div class="viewer-container">
             <div class="viewer-header">
-                <h1>Last Image Comparision Viewer</h1>
+                <h1>Image Push Viewer</h1>
                 <div class="viewer-id-display">
                     <span>Viewer ID: </span>
                     <span id="viewer-id-display">-</span>
@@ -20,7 +20,7 @@
                     <span id="status-text">Connecting...</span>
                 </div>
             </div>
-            
+
             <div class="mode-row">
                 <label for="mode-select">Compare:</label>
                 <select id="mode-select">
@@ -36,7 +36,7 @@
                 </button>
                 <span id="mode-warning" class="mode-warning" style="display: none;"></span>
             </div>
-            
+
             <div class="canvas-wrapper" id="canvas-wrapper">
                 <canvas id="canvas"></canvas>
             </div>
@@ -49,13 +49,13 @@
                     Clear last image
                 </button>
             </div>
-            
+
             <div class="status-line" id="status-line">
                 Waiting for connection...
             </div>
         </div>
     </div>
-    
-    <script src="/static/viewer.js"></script>
+
+    <script src="/simple_ui_viewer/static/viewer.js"></script>
 </body>
 </html>

@@ -411,10 +411,9 @@ function toggleImageView() {
 
 // WebSocket connection
 function getWebSocketURL() {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.hostname;
-    const port = "8788";
-    return `${protocol}//${host}:${port}/ws`;
+    // Use current origin and append the WebSocket path
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${wsProtocol}//${window.location.host}/ws/simple_ui_viewer`;
 }
 
 function connectWebSocket() {
@@ -427,7 +426,7 @@ function connectWebSocket() {
 
     try {
         const ws = new WebSocket(url);
-        
+
         ws.onopen = () => {
             console.log("[Viewer] WebSocket connected");
             state.reconnectAttempts = 0;
@@ -437,7 +436,7 @@ function connectWebSocket() {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                
+
                 // Filter by viewer_id
                 if (data.viewer_id !== state.viewerId) {
                     return;
@@ -530,10 +529,8 @@ elements.canvasWrapper.addEventListener("pointerdown", (event) => {
     if (event.button === 1) {
         // Middle mouse button - pan mode
         state.isPanning = true;
-        state.panStartX = event.clientX;
-        state.panStartY = event.clientY;
-        state.panInitialX = state.panX;
-        state.panInitialY = state.panY;
+        state.panStartX = event.clientX - state.panX;
+        state.panStartY = event.clientY - state.panY;
         elements.canvasWrapper.classList.add("panning");
         event.preventDefault();
         return;
@@ -542,10 +539,8 @@ elements.canvasWrapper.addEventListener("pointerdown", (event) => {
     if (spaceKeyPressed) {
         // Space key + left mouse - pan mode
         state.isPanning = true;
-        state.panStartX = event.clientX;
-        state.panStartY = event.clientY;
-        state.panInitialX = state.panX;
-        state.panInitialY = state.panY;
+        state.panStartX = event.clientX - state.panX;
+        state.panStartY = event.clientY - state.panY;
         elements.canvasWrapper.classList.add("panning");
         event.preventDefault();
         return;
@@ -555,14 +550,12 @@ elements.canvasWrapper.addEventListener("pointerdown", (event) => {
         return;
     }
 
-    // Split mode dragging
+    // Split mode dragging - account for pan offset
     state.isDragging = true;
     const rect = elements.canvasWrapper.getBoundingClientRect();
-    const localX = event.clientX - rect.left;
-    // When zoomed/panned, convert cursor to world space so splitter matches cursor.
-    // Screen: localX = (worldX + panX) * scale  =>  worldX = localX/scale - panX
-    const worldX = localX / state.scale - state.panX;
-    const ratio = worldX / rect.width;
+    // Adjust mouse position for current pan offset to get correct ratio
+    const adjustedX = event.clientX - rect.left - (state.panX * state.scale);
+    const ratio = adjustedX / (rect.width / state.scale);
     state.sliderRatio = clamp(ratio);
     scheduleRender();
     event.preventDefault();
@@ -571,19 +564,15 @@ elements.canvasWrapper.addEventListener("pointerdown", (event) => {
 window.addEventListener("pointermove", (event) => {
     if (state.isDragging) {
         const rect = elements.canvasWrapper.getBoundingClientRect();
-        const localX = event.clientX - rect.left;
-        const worldX = localX / state.scale - state.panX;
-        const ratio = worldX / rect.width;
+        // Adjust mouse position for current pan offset to get correct ratio
+        const adjustedX = event.clientX - rect.left - (state.panX * state.scale);
+        const ratio = adjustedX / (rect.width / state.scale);
         state.sliderRatio = clamp(ratio);
         scheduleRender();
         event.preventDefault();
     } else if (state.isPanning) {
-        // panX/panY are stored in world/CSS units; mouse deltas are screen pixels.
-        // Divide by scale so panning feels 1:1 at any zoom level.
-        const dx = (event.clientX - state.panStartX) / state.scale;
-        const dy = (event.clientY - state.panStartY) / state.scale;
-        state.panX = state.panInitialX + dx;
-        state.panY = state.panInitialY + dy;
+        state.panX = event.clientX - state.panStartX;
+        state.panY = event.clientY - state.panStartY;
         scheduleRender();
         event.preventDefault();
     }

@@ -1,3 +1,0 @@
-"""
-Viewer service package.
-"""
