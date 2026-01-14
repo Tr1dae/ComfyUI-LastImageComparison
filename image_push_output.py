@@ -171,7 +171,7 @@ class ImagePushOutput:
         auto_connect: bool = True,
         max_preview_resolution: int = 1024,
         webp_quality: int = 45,
-        ws_url: str = "ws://127.0.0.1:8788/ws",
+        ws_url: str = "ws://127.0.0.1:8188/ws/simple_ui_viewer",
     ):
         """
         Process image and push to viewer service.
@@ -211,8 +211,16 @@ class ImagePushOutput:
             # Create message
             message = create_image_push_message(viewer_id, image_webp_b64)
 
+            # If user points at ComfyUI's built-in /ws, rewrite to our viewer WS endpoint.
+            # This avoids the "connected but nothing arrives" situation.
+            normalized_ws_url = (ws_url or "").strip()
+            if normalized_ws_url.endswith("/"):
+                normalized_ws_url = normalized_ws_url[:-1]
+            if normalized_ws_url.endswith("/ws"):
+                normalized_ws_url = normalized_ws_url + "/simple_ui_viewer"
+
             # Get client and push message
-            client = get_client(ws_url=ws_url, auto_connect=auto_connect)
+            client = get_client(ws_url=normalized_ws_url, auto_connect=auto_connect)
             success = client.push_message(message)
 
             if not success:

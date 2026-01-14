@@ -57,6 +57,30 @@ class WSPushClient:
         self.thread.start()
         logger.info(f"[WSPushClient] Started background thread for {self.ws_url}")
 
+    def update_config(self, ws_url: str, auto_connect: bool) -> None:
+        """
+        Update connection settings for the running client.
+        If ws_url changes, force a reconnect.
+        """
+        ws_url = (ws_url or "").strip()
+        with self._lock:
+            url_changed = ws_url and ws_url != self.ws_url
+            self.auto_connect = auto_connect
+            if url_changed:
+                self.ws_url = ws_url
+                self.connected = False
+                # Close existing ws (async) to trigger reconnect
+                if self.loop and self.loop.is_running():
+                    asyncio.run_coroutine_threadsafe(self._close_ws_only(), self.loop)
+
+    async def _close_ws_only(self):
+        if self.ws:
+            try:
+                await self.ws.close()
+            except Exception:
+                pass
+            self.ws = None
+
     def stop(self):
         """Stop the background thread and close connections."""
         self.running = False
@@ -253,5 +277,7 @@ def get_client(ws_url: str = "ws://127.0.0.1:8188/ws/simple_ui_viewer", auto_con
     if _singleton_client is None:
         _singleton_client = WSPushClient(ws_url=ws_url, auto_connect=auto_connect)
         _singleton_client.start()
+    else:
+        _singleton_client.update_config(ws_url=ws_url, auto_connect=auto_connect)
 
     return _singleton_client

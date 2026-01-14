@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 
+import aiohttp
 from aiohttp import web
 from server import PromptServer
 
