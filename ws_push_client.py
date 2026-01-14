@@ -24,7 +24,7 @@ class WSPushClient:
     Maintains a persistent connection in a background thread.
     """
 
-    def __init__(self, ws_url: str = "ws://127.0.0.1:8788/ws", auto_connect: bool = True):
+    def __init__(self, ws_url: str = "ws://127.0.0.1:8188/ws/simple_ui_viewer", auto_connect: bool = True):
         """
         Initialize the WebSocket push client.
 
@@ -237,7 +237,7 @@ class WSPushClient:
 _singleton_client: Optional[WSPushClient] = None
 
 
-def get_client(ws_url: str = "ws://127.0.0.1:8788/ws", auto_connect: bool = True) -> WSPushClient:
+def get_client(ws_url: str = "ws://127.0.0.1:8188/ws/simple_ui_viewer", auto_connect: bool = True) -> WSPushClient:
     """
     Get or create the singleton WebSocket push client.
 

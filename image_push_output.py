@@ -157,7 +157,7 @@ class ImagePushOutput:
                 "ws_url": (
                     "STRING",
                     {
-                        "default": "ws://127.0.0.1:8788/ws",
+                        "default": "ws://127.0.0.1:8188/ws/simple_ui_viewer",
                         "tooltip": "WebSocket server URL (advanced)",
                     },
                 ),
