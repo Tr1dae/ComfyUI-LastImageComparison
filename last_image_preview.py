@@ -30,7 +30,7 @@ def normalize_image_tensor(tensor: torch.Tensor) -> torch.Tensor:
 
 
 class LastImagePreview:
-    CATEGORY = "EasyFilePaths"
+    CATEGORY = "Last Image Comparision Viewer"
     OUTPUT_NODE = True
     RETURN_TYPES = ()
     FUNCTION = "preview"

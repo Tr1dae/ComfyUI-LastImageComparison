@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ComfyUI Image Push Viewer</title>
+    <title>ComfyUI Last Image Comparision Viewer</title>
     <link rel="stylesheet" href="/static/viewer.css">
 </head>
 <body>
     <div id="app">
         <div class="viewer-container">
             <div class="viewer-header">
-                <h1>Image Push Viewer</h1>
+                <h1>Last Image Comparision Viewer</h1>
                 <div class="viewer-id-display">
                     <span>Viewer ID: </span>
                     <span id="viewer-id-display">-</span>
@@ -31,15 +31,16 @@
                 <button type="button" id="toggle-button" class="toggle-button" style="display: none;">
                     Show saved image
                 </button>
+                <button type="button" id="reset-view-button" class="action-button">
+                    Reset view
+                </button>
+                <span id="mode-warning" class="mode-warning" style="display: none;"></span>
             </div>
             
             <div class="canvas-wrapper" id="canvas-wrapper">
                 <canvas id="canvas"></canvas>
-                <div class="overlay" id="overlay">
-                    No saved image. Press "Update last image" to capture.
-                </div>
             </div>
-            
+
             <div class="action-row">
                 <button type="button" id="update-button" class="action-button" disabled>
                     Update last image

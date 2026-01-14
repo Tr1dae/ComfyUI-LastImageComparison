@@ -104,7 +104,7 @@ class ImagePushOutput:
     ComfyUI node that pushes images to an external viewer via WebSocket.
     """
 
-    CATEGORY = "DevImage"
+    CATEGORY = "Last Image Comparision Viewer"
     OUTPUT_NODE = True
     RETURN_TYPES = ()
     FUNCTION = "push_image"

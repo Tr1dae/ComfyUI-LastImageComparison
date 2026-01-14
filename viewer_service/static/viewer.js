@@ -51,11 +51,12 @@ const state = {
 const elements = {
     canvasWrapper: document.getElementById("canvas-wrapper"),
     canvas: document.getElementById("canvas"),
-    overlay: document.getElementById("overlay"),
     modeSelect: document.getElementById("mode-select"),
     toggleButton: document.getElementById("toggle-button"),
     updateButton: document.getElementById("update-button"),
     clearButton: document.getElementById("clear-button"),
+    resetViewButton: document.getElementById("reset-view-button"),
+    modeWarning: document.getElementById("mode-warning"),
     statusLine: document.getElementById("status-line"),
     viewerIdDisplay: document.getElementById("viewer-id-display"),
     connectionStatus: document.getElementById("connection-status"),
@@ -244,13 +245,18 @@ function updateStatusText() {
     const hasCurrent = Boolean(state.currentImage?.loaded);
     const hasLast = Boolean(state.lastImage?.loaded);
 
-    if (!hasCurrent) {
-        elements.statusLine.textContent = "Waiting for current image…";
-        return;
+    // Handle warning text in mode-row
+    if (!hasLast) {
+        elements.modeWarning.innerHTML = '<span class="warning-text">No saved image. Press "Update last image" to capture it.</span>';
+        elements.modeWarning.style.display = "inline";
+    } else {
+        elements.modeWarning.style.display = "none";
     }
 
-    if (!hasLast) {
-        elements.statusLine.textContent = "Last image not saved yet. Press update to store it.";
+    // Handle status line
+    if (!hasCurrent) {
+        elements.statusLine.textContent = "Waiting for current image…";
+        elements.statusLine.className = "status-line";
         return;
     }
 
@@ -260,6 +266,7 @@ function updateStatusText() {
         suffix = state.toggleActive === "last" ? " (showing saved)" : " (showing current)";
     }
     elements.statusLine.textContent = `Comparison ready — ${modeLabel}${suffix}`;
+    elements.statusLine.className = "status-line";
 }
 
 function updateInteractiveState() {
@@ -271,14 +278,7 @@ function updateInteractiveState() {
     elements.toggleButton.style.display = state.compareMode === MODE_TOGGLE ? "inline-flex" : "none";
     elements.toggleButton.textContent =
         state.toggleActive === "last" ? "Show current image" : "Show saved image";
-    
-    if (hasLast) {
-        elements.overlay.classList.add("hidden");
-    } else {
-        elements.overlay.classList.remove("hidden");
-        elements.overlay.textContent = "No saved image. Press \"Update last image\" to capture.";
-    }
-    
+
     if (state.compareMode === MODE_SPLIT && hasLast) {
         elements.canvasWrapper.classList.add("split-mode");
     } else {
@@ -493,12 +493,22 @@ elements.modeSelect.addEventListener("change", () => {
     if (state.compareMode !== MODE_TOGGLE) {
         state.toggleActive = "current";
     }
+    // Reset view when switching comparison modes
+    state.scale = 1.0;
+    state.panX = 0;
+    state.panY = 0;
     scheduleRender();
 });
 
 elements.toggleButton.addEventListener("click", () => toggleImageView());
 elements.updateButton.addEventListener("click", () => persistLastImage());
 elements.clearButton.addEventListener("click", () => clearLastImage());
+elements.resetViewButton.addEventListener("click", () => {
+    state.scale = 1.0;
+    state.panX = 0;
+    state.panY = 0;
+    scheduleRender();
+});
 
 // Track space key for pan mode
 let spaceKeyPressed = false;
@@ -517,24 +527,42 @@ window.addEventListener("keyup", (event) => {
 
 // Split mode dragging
 elements.canvasWrapper.addEventListener("pointerdown", (event) => {
-    if (spaceKeyPressed) {
-        // Pan mode
+    if (event.button === 1) {
+        // Middle mouse button - pan mode
         state.isPanning = true;
-        state.panStartX = event.clientX - state.panX;
-        state.panStartY = event.clientY - state.panY;
+        state.panStartX = event.clientX;
+        state.panStartY = event.clientY;
+        state.panInitialX = state.panX;
+        state.panInitialY = state.panY;
         elements.canvasWrapper.classList.add("panning");
         event.preventDefault();
         return;
     }
-    
+
+    if (spaceKeyPressed) {
+        // Space key + left mouse - pan mode
+        state.isPanning = true;
+        state.panStartX = event.clientX;
+        state.panStartY = event.clientY;
+        state.panInitialX = state.panX;
+        state.panInitialY = state.panY;
+        elements.canvasWrapper.classList.add("panning");
+        event.preventDefault();
+        return;
+    }
+
     if (state.compareMode !== MODE_SPLIT || !state.lastImage?.loaded) {
         return;
     }
-    
+
     // Split mode dragging
     state.isDragging = true;
     const rect = elements.canvasWrapper.getBoundingClientRect();
-    const ratio = (event.clientX - rect.left) / rect.width;
+    const localX = event.clientX - rect.left;
+    // When zoomed/panned, convert cursor to world space so splitter matches cursor.
+    // Screen: localX = (worldX + panX) * scale  =>  worldX = localX/scale - panX
+    const worldX = localX / state.scale - state.panX;
+    const ratio = worldX / rect.width;
     state.sliderRatio = clamp(ratio);
     scheduleRender();
     event.preventDefault();
@@ -543,13 +571,19 @@ elements.canvasWrapper.addEventListener("pointerdown", (event) => {
 window.addEventListener("pointermove", (event) => {
     if (state.isDragging) {
         const rect = elements.canvasWrapper.getBoundingClientRect();
-        const ratio = (event.clientX - rect.left) / rect.width;
+        const localX = event.clientX - rect.left;
+        const worldX = localX / state.scale - state.panX;
+        const ratio = worldX / rect.width;
         state.sliderRatio = clamp(ratio);
         scheduleRender();
         event.preventDefault();
     } else if (state.isPanning) {
-        state.panX = event.clientX - state.panStartX;
-        state.panY = event.clientY - state.panStartY;
+        // panX/panY are stored in world/CSS units; mouse deltas are screen pixels.
+        // Divide by scale so panning feels 1:1 at any zoom level.
+        const dx = (event.clientX - state.panStartX) / state.scale;
+        const dy = (event.clientY - state.panStartY) / state.scale;
+        state.panX = state.panInitialX + dx;
+        state.panY = state.panInitialY + dy;
         scheduleRender();
         event.preventDefault();
     }
@@ -569,11 +603,16 @@ elements.canvasWrapper.addEventListener("wheel", (event) => {
     const y = event.clientY - rect.top;
 
     const delta = event.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = clamp(state.scale * delta, 0.1, 10);
+    const oldScale = state.scale;
+    const newScale = clamp(oldScale * delta, 0.1, 10);
 
-    const scaleChange = newScale / state.scale;
-    state.panX = x - (x - state.panX) * scaleChange;
-    state.panY = y - (y - state.panY) * scaleChange;
+    // Calculate the world point under the cursor before zooming
+    const worldX = (x - state.panX * oldScale) / oldScale;
+    const worldY = (y - state.panY * oldScale) / oldScale;
+
+    // After zooming, the same world point should be at the same screen position
+    state.panX = (x - worldX * newScale) / newScale;
+    state.panY = (y - worldY * newScale) / newScale;
     state.scale = newScale;
 
     scheduleRender();
