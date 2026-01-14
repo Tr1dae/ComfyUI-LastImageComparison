@@ -117,7 +117,7 @@ class ImagePushOutput:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "image": ("IMAGE", {"tooltip": "Image to push to viewer"}),
+                "image": ("IMAGE", {"tooltip": "Image to push to Last Image Comparison viewer"}),
                 "viewer_id": (
                     "STRING",
                     {
@@ -137,7 +137,7 @@ class ImagePushOutput:
                 "max_preview_resolution": (
                     "INT",
                     {
-                        "default": 1024,
+                        "default": 4096,
                         "min": 256,
                         "max": 4096,
                         "step": 64,
@@ -147,7 +147,7 @@ class ImagePushOutput:
                 "webp_quality": (
                     "INT",
                     {
-                        "default": 45,
+                        "default": 80,
                         "min": 10,
                         "max": 100,
                         "step": 5,
@@ -241,5 +241,5 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "ImagePushOutput": "Image Push Output",
+    "ImagePushOutput": "Last Image Output",
 }
