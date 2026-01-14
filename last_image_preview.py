@@ -34,6 +34,7 @@ class LastImagePreview:
     OUTPUT_NODE = True
     RETURN_TYPES = ()
     FUNCTION = "preview"
+    SIZE = [400, 600]  # Default size: width x height
     DESCRIPTION = (
         "Preview a single image and expose it to the custom frontend for manual "
         "comparison with a stored \"last\" image."
