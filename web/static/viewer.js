@@ -8,6 +8,8 @@ const MODE_SPLIT = "split";
 const MODE_SIDEBYSIDE = "side-by-side";
 const MODE_TOGGLE = "toggle";
 
+const STORAGE_KEY_PREFIX = "comfy_viewer_last_image_";
+
 const COMPARISON_MODES = [
     { value: MODE_SPLIT, label: "Split (draggable)" },
     { value: MODE_SIDEBYSIDE, label: "Side-by-side" },
@@ -47,6 +49,13 @@ const state = {
     maxReconnectAttempts: 10,
 };
 
+function getStorageKey() {
+    if (!state.viewerId) {
+        return null;
+    }
+    return `${STORAGE_KEY_PREFIX}${state.viewerId}`;
+}
+
 // DOM elements
 const elements = {
     canvasWrapper: document.getElementById("canvas-wrapper"),
@@ -75,25 +84,61 @@ function clamp(value, min = 0, max = 1) {
     return Math.min(max, Math.max(min, value));
 }
 
-function createImageEntry(base64Data, onReady) {
-    if (!base64Data) {
+function normalizePayload(payload) {
+    if (!payload) {
         return null;
     }
 
-    // Remove data URI prefix if present
-    let base64 = base64Data;
-    if (base64Data.startsWith("data:")) {
-        const commaIndex = base64Data.indexOf(",");
+    let base64 = "";
+    let mime = "image/webp";
+    let format = "WEBP";
+
+    if (typeof payload === "string") {
+        base64 = payload;
+    } else if (typeof payload === "object" && typeof payload.base64 === "string") {
+        base64 = payload.base64;
+        if (payload.mime) {
+            mime = payload.mime;
+        }
+        if (payload.format) {
+            format = payload.format;
+        }
+    } else {
+        return null;
+    }
+
+    if (!base64) {
+        return null;
+    }
+
+    if (base64.startsWith("data:")) {
+        const commaIndex = base64.indexOf(",");
         if (commaIndex !== -1) {
-            base64 = base64Data.substring(commaIndex + 1);
+            const metadata = base64.substring(5, commaIndex);
+            if (metadata) {
+                const [maybeMime] = metadata.split(";");
+                if (maybeMime) {
+                    mime = maybeMime;
+                }
+            }
+            base64 = base64.substring(commaIndex + 1);
         }
     }
 
-    const mime = "image/webp";
+    return { base64, mime, format };
+}
+
+function createImageEntry(base64Data, onReady) {
+    const normalized = normalizePayload(base64Data);
+    if (!normalized) {
+        return null;
+    }
+
+    const { base64, mime } = normalized;
     const src = `data:${mime};base64,${base64}`;
     const img = new Image();
     const entry = {
-        data: { base64, mime, format: "WEBP" },
+        data: { base64, mime, format: normalized.format },
         img,
         loaded: false,
         error: false,
@@ -387,17 +432,58 @@ function persistLastImage() {
     }
     const payload = {
         base64: state.currentImage.data.base64,
-        mime: state.currentImage.data.mime,
-        format: state.currentImage.data.format,
+        mime: state.currentImage.data.mime ?? "image/webp",
+        format: state.currentImage.data.format ?? "WEBP",
     };
-    const entry = createImageEntry(payload.base64, () => scheduleRender());
+    const storageKey = getStorageKey();
+    if (storageKey) {
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(payload));
+        } catch (error) {
+            console.warn("[Viewer] Unable to save last image to localStorage", error);
+        }
+    }
+    const entry = createImageEntry(payload, () => scheduleRender());
     state.lastImage = entry;
     scheduleRender();
 }
 
 function clearLastImage() {
+    const storageKey = getStorageKey();
+    if (storageKey) {
+        try {
+            localStorage.removeItem(storageKey);
+        } catch (error) {
+            console.warn("[Viewer] Unable to clear stored last image", error);
+        }
+    }
     state.lastImage = null;
     scheduleRender();
+}
+
+function loadStoredLastImage() {
+    const storageKey = getStorageKey();
+    if (!storageKey) {
+        return;
+    }
+    let stored = null;
+    try {
+        stored = localStorage.getItem(storageKey);
+    } catch (error) {
+        console.warn("[Viewer] localStorage read failed", error);
+        return;
+    }
+    if (!stored) {
+        return;
+    }
+    try {
+        const payload = JSON.parse(stored);
+        const entry = createImageEntry(payload, () => scheduleRender());
+        state.lastImage = entry;
+        scheduleRender();
+    } catch (error) {
+        console.warn("[Viewer] Corrupt stored last image", error);
+    }
 }
 
 function toggleImageView() {
@@ -526,11 +612,13 @@ window.addEventListener("keyup", (event) => {
 
 // Split mode dragging
 elements.canvasWrapper.addEventListener("pointerdown", (event) => {
+    const safeScale = Math.max(state.scale, 0.0001);
+
     if (event.button === 1) {
         // Middle mouse button - pan mode
         state.isPanning = true;
-        state.panStartX = event.clientX - state.panX;
-        state.panStartY = event.clientY - state.panY;
+        state.panStartX = event.clientX / safeScale - state.panX;
+        state.panStartY = event.clientY / safeScale - state.panY;
         elements.canvasWrapper.classList.add("panning");
         event.preventDefault();
         return;
@@ -539,8 +627,8 @@ elements.canvasWrapper.addEventListener("pointerdown", (event) => {
     if (spaceKeyPressed) {
         // Space key + left mouse - pan mode
         state.isPanning = true;
-        state.panStartX = event.clientX - state.panX;
-        state.panStartY = event.clientY - state.panY;
+        state.panStartX = event.clientX / safeScale - state.panX;
+        state.panStartY = event.clientY / safeScale - state.panY;
         elements.canvasWrapper.classList.add("panning");
         event.preventDefault();
         return;
@@ -550,29 +638,30 @@ elements.canvasWrapper.addEventListener("pointerdown", (event) => {
         return;
     }
 
-    // Split mode dragging - account for pan offset
+    // Split mode dragging - convert cursor position to world coords
     state.isDragging = true;
     const rect = elements.canvasWrapper.getBoundingClientRect();
-    // Adjust mouse position for current pan offset to get correct ratio
-    const adjustedX = event.clientX - rect.left - (state.panX * state.scale);
-    const ratio = adjustedX / (rect.width / state.scale);
+    const offsetX = event.clientX - rect.left;
+    const worldX = offsetX / safeScale - state.panX;
+    const ratio = clamp(worldX / rect.width);
     state.sliderRatio = clamp(ratio);
     scheduleRender();
     event.preventDefault();
 });
 
 window.addEventListener("pointermove", (event) => {
+    const safeScale = Math.max(state.scale, 0.0001);
     if (state.isDragging) {
         const rect = elements.canvasWrapper.getBoundingClientRect();
-        // Adjust mouse position for current pan offset to get correct ratio
-        const adjustedX = event.clientX - rect.left - (state.panX * state.scale);
-        const ratio = adjustedX / (rect.width / state.scale);
+        const offsetX = event.clientX - rect.left;
+        const worldX = offsetX / safeScale - state.panX;
+        const ratio = clamp(worldX / rect.width);
         state.sliderRatio = clamp(ratio);
         scheduleRender();
         event.preventDefault();
     } else if (state.isPanning) {
-        state.panX = event.clientX - state.panStartX;
-        state.panY = event.clientY - state.panStartY;
+        state.panX = event.clientX / safeScale - state.panStartX;
+        state.panY = event.clientY / safeScale - state.panStartY;
         scheduleRender();
         event.preventDefault();
     }
@@ -637,5 +726,6 @@ window.addEventListener("resize", () => {
 });
 
 // Initialize
+loadStoredLastImage();
 connectWebSocket();
 scheduleRender();
