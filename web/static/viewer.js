@@ -499,7 +499,7 @@ function toggleImageView() {
 function getWebSocketURL() {
     // Use current origin and append the WebSocket path
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${wsProtocol}//${window.location.host}/ws/simple_ui_viewer`;
+    return `${wsProtocol}//${window.location.host}/ws`;
 }
 
 function connectWebSocket() {
@@ -521,14 +521,17 @@ function connectWebSocket() {
 
         ws.onmessage = (event) => {
             try {
-                const data = JSON.parse(event.data);
+                const envelope = JSON.parse(event.data);
+                const { type, data } = envelope || {};
 
-                // Filter by viewer_id
+                if (type !== "last_image_comparison" || typeof data !== "object") {
+                    return;
+                }
+
                 if (data.viewer_id !== state.viewerId) {
                     return;
                 }
 
-                // Update current image
                 if (data.image_webp) {
                     applyCurrentImage(data.image_webp);
                 }
