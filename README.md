@@ -5,12 +5,12 @@ A ComfyUI custom node package that provides advanced image comparison tools for 
 ## Features
 
 ### Image Push Output Node
-- **WebSocket-based image push**: Send images from your ComfyUI workflow to an external viewer
+- **Integrated WebSocket push**: Send images from your ComfyUI workflow to an embedded viewer
 - **Multi-viewer support**: Run multiple viewers with different `viewer_id` values simultaneously
 - **Automatic WebP compression**: Optimized for low bandwidth with configurable quality
 - **Optional downscaling**: Reduce preview size while maintaining aspect ratio
 - **Reconnection handling**: Automatic reconnection with exponential backoff
-- **Auto-launch viewer service**: External viewer starts automatically when ComfyUI loads
+- **Integrated viewer**: Viewer runs on the same ComfyUI server instance
 
 ### Last Image Preview Node
 - **Manual comparison**: Save and compare current images against previously saved "last" images
@@ -31,7 +31,7 @@ git clone https://github.com/Tr1dae/ComfyUI-LastImageComparison.git
 
 2. Restart ComfyUI or reload custom nodes
 
-The viewer service will automatically start on port 8788 when ComfyUI loads.
+The viewer is automatically integrated into your ComfyUI server instance.
 
 ## Usage
 
@@ -44,7 +44,7 @@ The viewer service will automatically start on port 8788 when ComfyUI loads.
    - `max_preview_resolution`: Maximum dimension (default: 1024px)
    - `webp_quality`: Compression quality 0-100 (default: 45)
    - `auto_connect`: Auto-reconnect on disconnect (default: true)
-5. Click "Open Viewer for this ID" to launch the viewer in a new tab
+5. Click "Open Viewer for this ID" to launch the viewer in a new tab (opens on your ComfyUI server)
 6. Run your workflow - images will appear in the viewer
 
 ### Last Image Preview Node
@@ -67,10 +67,10 @@ The viewer service will automatically start on port 8788 when ComfyUI loads.
 
 ## Architecture
 
-### Push Model
-- **Driver**: ComfyUI nodes send images via WebSocket
-- **Transport**: WebSocket push with automatic reconnection
-- **Viewer**: Passive receiver that filters by `viewer_id`
+### Integrated Push Model
+- **Driver**: ComfyUI nodes send images via WebSocket to the integrated viewer
+- **Transport**: WebSocket push using ComfyUI's server with automatic reconnection
+- **Viewer**: Integrated HTML/CSS/JS interface that filters by `viewer_id`
 
 ### Message Format
 ```json
@@ -81,8 +81,8 @@ The viewer service will automatically start on port 8788 when ComfyUI loads.
 }
 ```
 
-### Auto-launch
-The external viewer service starts automatically on port 8788 when ComfyUI loads the custom node package.
+### Integration
+The viewer is served directly from your ComfyUI server at `/simple_ui_viewer` and uses the same WebSocket endpoint as ComfyUI.
 
 ## Technical Details
 
@@ -100,17 +100,17 @@ The external viewer service starts automatically on port 8788 when ComfyUI loads
 - Silent message dropping when disconnected
 - Thread-safe message queue
 
-### Viewer Service
-- aiohttp-based HTTP/WebSocket server
-- Broadcasts messages to all connected clients
+### Integrated Viewer
+- Served directly from ComfyUI's HTTP server
+- Uses ComfyUI's WebSocket endpoint for real-time updates
 - Clients filter messages locally by `viewer_id`
 - No persistence, in-memory only
 
 ## Configuration
 
 ### Default Settings
-- **Viewer port**: 8788
-- **WebSocket URL**: `ws://127.0.0.1:8788/ws`
+- **Viewer URL**: `http://your-comfyui-host/simple_ui_viewer?id=viewer_id`
+- **WebSocket URL**: Uses ComfyUI's WebSocket endpoint
 - **Max resolution**: 1024px (longest side)
 - **WebP quality**: 45 (balanced size/quality)
 - **Auto-connect**: Enabled
@@ -124,9 +124,9 @@ Override the default WebSocket URL in the node settings for:
 ## Troubleshooting
 
 ### Viewer Not Loading
-- Check that port 8788 is available
-- Verify no firewall blocking the port
+- Verify ComfyUI server is running and accessible
 - Check ComfyUI console for startup messages
+- Ensure the viewer URL format is correct: `/simple_ui_viewer?id=viewer_id`
 
 ### Images Not Appearing
 - Confirm `viewer_id` matches between node and URL
@@ -142,35 +142,29 @@ Override the default WebSocket URL in the node settings for:
 
 ### Project Structure
 ```
-ComfyUI-DevImage/
+ComfyUI-LastImageComparison/
 ├── __init__.py                    # Main package entry
 ├── last_image_preview.py         # Original preview node
-├── image_push_output.py          # New push output node
+├── image_push_output.py          # Push output node
 ├── ws_push_client.py             # WebSocket client
 ├── protocol.py                   # Message protocol
-├── web/                          # Frontend assets
-│   ├── last_image_preview.js
-│   └── image_push_output.js
-└── viewer_service/               # External viewer
-    ├── server.py                 # aiohttp server
-    ├── auto_start.py             # Auto-launch helper
-    └── static/                   # Viewer UI
-        ├── index.html
-        ├── viewer.js
-        └── viewer.css
+├── viewer_routes.py              # ComfyUI server integration
+└── web/                          # Frontend assets
+    ├── static/                   # Viewer UI
+    │   ├── index.html
+    │   ├── viewer.js
+    │   └── viewer.css
+    ├── last_image_preview.js
+    └── image_push_output.js
 ```
 
-### Manual Viewer Launch
-If auto-launch doesn't work, start manually:
-```bash
-cd custom_nodes/ComfyUI-DevImage/viewer_service
-python server.py
+### Manual Viewer Access
+The viewer is automatically available at:
+```
+http://your-comfyui-host/simple_ui_viewer?id=viewer_id
 ```
 
-### Custom Port
-```bash
-python server.py 9090  # Custom port
-```
+Replace `your-comfyui-host` with your ComfyUI server address and `viewer_id` with your chosen identifier.
 
 ## License
 
