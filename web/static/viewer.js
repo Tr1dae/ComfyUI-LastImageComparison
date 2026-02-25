@@ -73,11 +73,13 @@ const elements = {
     statusText: document.getElementById("status-text"),
 };
 
-// Get 2D context
-const ctx = elements.canvas.getContext("2d");
+// Get 2D context (null when not in the viewer page, e.g. extension host)
+const ctx = elements.canvas ? elements.canvas.getContext("2d") : null;
 
-// Update viewer ID display
-elements.viewerIdDisplay.textContent = state.viewerId;
+// Update viewer ID display (only if element exists)
+if (elements.viewerIdDisplay) {
+    elements.viewerIdDisplay.textContent = state.viewerId;
+}
 
 // Utility functions
 function clamp(value, min = 0, max = 1) {
@@ -575,7 +577,8 @@ function updateConnectionStatus(status, text) {
     elements.statusText.textContent = text;
 }
 
-// Event handlers
+if (elements.canvasWrapper && elements.canvas && ctx) {
+    // Event handlers
 elements.modeSelect.addEventListener("change", () => {
     state.compareMode = elements.modeSelect.value;
     if (state.compareMode !== MODE_TOGGLE) {
@@ -732,3 +735,5 @@ window.addEventListener("resize", () => {
 loadStoredLastImage();
 connectWebSocket();
 scheduleRender();
+
+}
